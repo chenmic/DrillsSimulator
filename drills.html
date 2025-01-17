@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drills</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background: #f4f4f4 url('court.png') no-repeat center center;
+            background-size: 500px 300px;
+        }
+        #drillSelect {
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Drills Simulator</h1>
+    <h5>(very poorly written and animated via AI)</h5>
+    <select id="drillSelect">
+        <option value="empty"></option>
+        <option value="3 short">3 short</option>
+        <option value="3 long">3 long</option>
+        <option value="23 right">23 right</option>
+        <option value="23 left">23 left</option>
+        <option value="box right">box right</option>
+        <option value="box left">box left</option>
+        <option value="baseline right">baseline right</option>
+        <option value="baseline left">baseline left</option>
+    </select>
+    <canvas id="court" width="550" height="350"></canvas>
+
+    <script>
+        const canvas = document.getElementById('court');
+        const ctx = canvas.getContext('2d');
+        const drillSelect = document.getElementById('drillSelect');
+        let currentDrillInterval = null;
+        let players = BaseStance();
+        drawPlayers(players);
+
+        function stopCurrentDrill() {
+            if (currentDrillInterval) {
+                clearInterval(currentDrillInterval);
+                currentDrillInterval = null;
+            }
+        }
+
+        function BaseStance(side, out) {
+            if (!out && !side) {
+                return {
+                    1: {x: 250, y: 20, color: 'blue'}, // Top of the key
+                    5: {x: 60, y: 140, color: 'green'}, // 45° right
+                    4: {x: 440, y: 140, color: 'green'}, // 45° left
+                    2: {x: 28, y: 250, color: 'red'}, // baseline right
+                    3: {x: 475, y: 250, color: 'red'}  // baseline left
+                }
+            }
+            else if (!out) {
+                let pg_x = (side === 'right') ? 90 : 410;
+                return {
+                    1: {x: pg_x, y: 70, color: 'blue'},
+                    5: {x: 60, y: 140, color: 'green'},
+                    4: {x: 440, y: 140, color: 'green'},
+                    2: {x: 28, y: 250, color: 'red'},
+                    3: {x: 475, y: 250, color: 'red'}
+                }
+            }
+            else if (out === 'side') {
+                if (side === 'right') {
+                    return {
+                        1: {x: 90, y: 80, color: 'blue'},
+                        5: {x: 440, y: 140, color: 'green'},
+                        4: {x: 60, y: 140, color: 'green'},
+                        2: {x: 0, y: 80, color: 'red'},
+                        3: {x: 475, y: 250, color: 'red'}
+                    }
+                }
+                else {
+                    return {
+                        1: {x: 400, y: 80, color: 'blue'},
+                        5: {x: 30, y: 170, color: 'green'},
+                        4: {x: 460, y: 200, color: 'green'},
+                        2: {x: 28, y: 250, color: 'red'},
+                        3: {x: 500, y: 80, color: 'red'}
+                    }
+                }
+            }
+            else if (out === 'box') {
+                let pg_x = (side === 'right') ? 170 : 330;
+                return {
+                    1: {x: pg_x, y: 312, color: 'blue'},
+                    5: {x: 170, y: 247, color: 'green'},
+                    4: {x: 330, y: 247, color: 'green'},
+                    2: {x: 170, y: 150, color: 'red'},
+                    3: {x: 330, y: 150, color: 'red'}
+                }
+            }
+            else if (out === 'baseline') {
+                let pg_x = (side === 'right') ? 170 : 330;
+                return {
+                    1: {x: pg_x, y: 312, color: 'blue'},
+                    5: {x: 250, y: 180, color: 'green'},
+                    4: {x: 250, y: 120, color: 'green'},
+                    2: {x: 170, y: 150, color: 'red'},
+                    3: {x: 330, y: 150, color: 'red'}
+                }
+            }
+        }
+
+        function drawPlayers(players) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(25, 25);
+            Object.keys(players).forEach(number => {
+                const { x, y, color } = players[number];
+                ctx.beginPath();
+                ctx.arc(x, y, 15, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.closePath();
+                ctx.fillStyle = 'white';
+                ctx.font = '12px Arial';
+                ctx.fillText(number, x - 4, y + 4);
+            });
+            ctx.restore();
+        }
+
+        function reset(side, out) {
+            stopCurrentDrill();
+            players = BaseStance(side, out);
+            drawPlayers(players);
+        }
+
+        function run3shortDrill() {
+            reset()
+            let frame = 0;
+            const originalPositions = BaseStance();
+            const screenOffset = 25;
+
+            const interval = setInterval(() => {
+                frame++;
+
+                if (frame <= 60) {
+                    players[4].x += (originalPositions[3].x - originalPositions[4].x - 20) / 60;
+                    players[4].y += (originalPositions[3].y - screenOffset - originalPositions[4].y) / 60;
+
+                    players[5].x += (originalPositions[2].x - originalPositions[5].x + 20) / 60;
+                    players[5].y += (originalPositions[2].y - screenOffset - originalPositions[5].y) / 60;
+                }
+
+                else if (frame > 60 && frame <= 120) {
+                    players[3].x += (originalPositions[4].x - originalPositions[3].x) / 60;
+                    players[3].y += (originalPositions[4].y - originalPositions[3].y) / 60;
+
+                    players[2].x += (originalPositions[5].x - originalPositions[2].x) / 60;
+                    players[2].y += (originalPositions[5].y - originalPositions[2].y) / 60;
+                }
+
+                drawPlayers(players);
+                if (frame > 120) {
+                    clearInterval(interval);
+                    setTimeout(reset, 1500);
+                }
+            }, 30);
+            return interval;
+        }
+
+        function run3longDrill() {
+            reset()
+            let frame = 0;
+            const originalPositions = BaseStance();
+            const screenOffset = 40;
+
+            const interval = setInterval(() => {
+                frame++;
+
+                if (frame <= 60) {
+                    players[2].x += (originalPositions[3].x - originalPositions[2].x) / 60;
+                    players[2].y += (originalPositions[3].y - originalPositions[2].y) / 60;
+
+                    players[3].x += (originalPositions[2].x - originalPositions[3].x) / 60;
+                    players[3].y += (originalPositions[2].y - originalPositions[3].y) / 60;
+
+                    players[4].x += (originalPositions[3].x - originalPositions[4].x - 20) / 60;
+                    players[4].y += (originalPositions[3].y - screenOffset - originalPositions[4].y) / 60;
+
+                    players[5].x += (originalPositions[2].x - originalPositions[5].x + 20) / 60;
+                    players[5].y += (originalPositions[2].y - screenOffset - originalPositions[5].y) / 60;                }
+
+                else if (frame > 60 && frame <= 120) {
+                    players[2].x += (originalPositions[4].x - originalPositions[3].x) / 60;
+                    players[2].y += (originalPositions[4].y - originalPositions[3].y) / 60;
+
+                    players[3].x += (originalPositions[5].x - originalPositions[2].x) / 60;
+                    players[3].y += (originalPositions[5].y - originalPositions[2].y) / 60;
+                }
+
+                drawPlayers(players);
+                if (frame > 120) {
+                    clearInterval(interval);
+                    setTimeout(reset, 1500);
+                }
+            }, 30);
+            return interval;
+        }
+
+        function run23RightDrill() {
+            reset('right')
+            let frame = 0;
+            const originalPositions = BaseStance('right');
+
+            const screenOffset = 20;
+            const interval = setInterval(() => {
+                frame++;
+
+                if (frame <= 60) {
+                    players[2].x += (originalPositions[3].x - originalPositions[2].x) / 60;
+                    players[2].y += (originalPositions[3].y - originalPositions[2].y) / 60;
+
+                    players[3].x += (originalPositions[5].x - originalPositions[3].x) / 360;
+                    players[3].y += (originalPositions[5].y - originalPositions[3].y) / 360;
+
+                    players[4].x += (originalPositions[2].x - originalPositions[4].x) / 360;
+                    players[4].y += (originalPositions[2].y - originalPositions[4].y) / 360;
+
+                    players[5].x += (originalPositions[1].x - originalPositions[5].x) / 60;
+                    players[5].y += (originalPositions[1].y + screenOffset - originalPositions[5].y) / 60;
+                }
+
+                else if (frame > 60 && frame <= 120) {
+                    players[1].x += (originalPositions[5].x - originalPositions[1].x) / 60;
+                    players[1].y += (originalPositions[5].y - originalPositions[1].y) / 60;
+
+                    players[2].x += (250 - originalPositions[3].x) / 60;
+                    players[2].y += (20 - originalPositions[3].y) / 60;
+                }
+
+                drawPlayers(players);
+                if (frame > 120) {
+                    clearInterval(interval);
+                    setTimeout(function() {reset('right');}, 1500);
+                }
+            }, 30);
+            return interval
+        }
+
+        function run23LeftDrill() {
+            reset('left')
+            let frame = 0;
+            const originalPositions = BaseStance('left');
+
+            const screenOffset = 20;
+            const interval = setInterval(() => {
+                frame++;
+
+                if (frame <= 60) {
+                    players[3].x += (originalPositions[2].x - originalPositions[3].x) / 60;
+                    players[3].y += (originalPositions[2].y - originalPositions[3].y) / 60;
+
+                    players[2].x += (originalPositions[4].x - originalPositions[2].x) / 360;
+                    players[2].y += (originalPositions[4].y - originalPositions[2].y) / 360;
+
+                    players[5].x += (originalPositions[3].x - originalPositions[5].x) / 360;
+                    players[5].y += (originalPositions[3].y - originalPositions[5].y) / 360;
+
+                    players[4].x += (originalPositions[1].x - originalPositions[4].x) / 60;
+                    players[4].y += (originalPositions[1].y + screenOffset - originalPositions[4].y) / 60;
+                }
+
+                else if (frame > 60 && frame <= 120) {
+                    players[1].x += (originalPositions[4].x - originalPositions[1].x) / 60;
+                    players[1].y += (originalPositions[4].y - originalPositions[1].y) / 60;
+
+                    players[3].x += (250 - originalPositions[2].x) / 60;
+                    players[3].y += (20 - originalPositions[2].y) / 60;
+                }
+
+                drawPlayers(players);
+                if (frame > 120) {
+                    clearInterval(interval);
+                    setTimeout(function() {reset('left');}, 1500);
+                }
+            }, 30);
+            return interval
+        }
+
+        function runBoxRightDrill() {
+            reset('right', 'box')
+            let frame = 0;
+            const originalPositions = BaseStance('right', 'box');
+
+            const interval = setInterval(() => {
+                frame++;
+
+                if (frame <= 30) {
+                    players[5].x += (originalPositions[3].x - originalPositions[5].x) / 60;
+                    players[5].y += (originalPositions[3].y + 20 - originalPositions[5].y) / 60;
+                }
+                else if (frame > 30 && frame <= 60) {
+                    players[3].x += (originalPositions[5].x - originalPositions[3].x) / 40;
+                    players[3].y += (originalPositions[5].y + 50 - originalPositions[3].y) / 40;
+                }
+                else if (frame > 60 && frame <= 90) {
+                    players[3].x += -originalPositions[3].x / 60;
+
+                    players[4].x += (-400 - originalPositions[4].x) / 90;
+                    players[4].y += originalPositions[4].y / 360;
+
+                    players[5].x += (originalPositions[2].x - players[5].x) / 30;
+                    players[5].y += (originalPositions[2].y + 50 - originalPositions[5].y) / 60;
+                }
+                else if (frame > 90 && frame <= 120) {
+                    players[2].x += (originalPositions[4].x - 50 - originalPositions[2].x) / 30;
+                    players[2].y += (originalPositions[4].y - originalPositions[2].y) / 30;
+                }
+
+                drawPlayers(players);
+                if (frame > 120) {
+                    clearInterval(interval);
+                    setTimeout(function() {reset('right', 'box');}, 1500);
+                }
+            }, 30);
+            return interval
+        }
+
+        function runBoxLeftDrill() {
+            reset('left', 'box')
+            let frame = 0;
+            const originalPositions = BaseStance('left', 'box');
+
+            const interval = setInterval(() => {
+                frame++;
+
+                if (frame <= 30) {
+                    players[4].x += (originalPositions[2].x - originalPositions[4].x) / 60;
+                    players[4].y += (originalPositions[2].y + 20 - originalPositions[4].y) / 60;
+                }
+                else if (frame > 30 && frame <= 60) {
+                    players[2].x += (originalPositions[4].x - originalPositions[2].x) / 40;
+                    players[2].y += (originalPositions[4].y + 50 - originalPositions[2].y) / 40;
+                }
+                else if (frame > 60 && frame <= 90) {
+                    players[2].x += originalPositions[2].x / 30;
+
+                    players[5].x += (400 + originalPositions[5].x) / 60;
+                    players[5].y += originalPositions[5].y / 360;
+
+                    players[4].x += (originalPositions[3].x - players[4].x) / 30;
+                    players[4].y += (originalPositions[3].y + 50 - originalPositions[4].y) / 60;
+                }
+                else if (frame > 90 && frame <= 120) {
+                    players[3].x += (originalPositions[5].x + 50 - originalPositions[3].x) / 30;
+                    players[3].y += (originalPositions[5].y - originalPositions[3].y) / 30;
+                }
+
+                drawPlayers(players);
+                if (frame > 120) {
+                    clearInterval(interval);
+                    setTimeout(function() {reset('left', 'box');}, 1500);
+                }
+            }, 30);
+            return interval
+        }
+
+        function runBaselineRightDrill() {
+            reset('right', 'baseline')
+            let frame = 0;
+            const originalPositions = BaseStance('right', 'baseline');
+
+            const interval = setInterval(() => {
+                frame++;
+
+                if (frame <= 30) {
+                    players[3].x += (originalPositions[1].x - originalPositions[3].x) / 40;
+                    players[3].y += (originalPositions[1].y - originalPositions[3].y) / 40;
+                }
+                else if (frame > 30 && frame <= 60) {
+                    players[3].x += -1 -originalPositions[3].x / 60;
+
+                    players[2].x += (originalPositions[3].x - originalPositions[2].x) / 30;
+                    players[2].y += (originalPositions[1].y - originalPositions[2].y) / 40;
+                }
+                else if (frame > 60 && frame <= 90) {
+                    players[2].x += 2 + originalPositions[2].x / 60;
+
+                    players[5].y += (originalPositions[4].y - originalPositions[5].y) / 180;
+                }
+                else if (frame > 90 && frame <= 120) {
+                    players[4].y += originalPositions[5].y / 40;
+                }
+
+                drawPlayers(players);
+                if (frame > 120) {
+                    clearInterval(interval);
+                    setTimeout(function() {reset('right', 'baseline');}, 1500);
+                }
+            }, 30);
+            return interval
+        }
+
+        function runBaselineLeftDrill() {
+            reset('left', 'baseline')
+            let frame = 0;
+            const originalPositions = BaseStance('left', 'baseline');
+
+            const interval = setInterval(() => {
+                frame++;
+
+                if (frame <= 30) {
+                    players[2].x += (originalPositions[1].x - originalPositions[2].x) / 40;
+                    players[2].y += (originalPositions[1].y - originalPositions[2].y) / 40;
+                }
+                else if (frame > 30 && frame <= 60) {
+                    players[2].x += 1 + originalPositions[2].x / 60;
+
+                    players[3].x += (originalPositions[2].x - originalPositions[3].x) / 30;
+                    players[3].y += (originalPositions[1].y - originalPositions[3].y) / 40;
+                }
+                else if (frame > 60 && frame <= 90) {
+                    players[3].x += -2 - originalPositions[2].x / 60;
+
+                    players[5].y += (originalPositions[4].y - originalPositions[5].y) / 180;
+                }
+                else if (frame > 90 && frame <= 120) {
+                    players[4].y += originalPositions[5].y / 40;
+                }
+
+                drawPlayers(players);
+                if (frame > 120) {
+                    clearInterval(interval);
+                    setTimeout(function() {reset('left', 'baseline');}, 1500);
+                }
+            }, 30);
+            return interval
+        }
+
+
+        drillSelect.addEventListener('change', () => {
+            setTimeout(() => {
+                drillSelect.value = 'empty';
+            }, 0);
+            switch (drillSelect.value) {
+                case 'empty':
+                    reset();
+                    break;
+                case '3 short':
+                    currentDrillInterval = run3shortDrill();
+                    break;
+                case '3 long':
+                    currentDrillInterval = run3longDrill();
+                    break;
+                case '23 right':
+                    currentDrillInterval = run23RightDrill();
+                    break;
+                case '23 left':
+                    currentDrillInterval = run23LeftDrill();
+                    break;
+                case 'box right':
+                    currentDrillInterval = runBoxRightDrill();
+                    break;
+                case 'box left':
+                    currentDrillInterval = runBoxLeftDrill();
+                    break;
+                case 'baseline right':
+                    currentDrillInterval = runBaselineRightDrill();
+                    break;
+                case 'baseline left':
+                    currentDrillInterval = runBaselineLeftDrill();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
